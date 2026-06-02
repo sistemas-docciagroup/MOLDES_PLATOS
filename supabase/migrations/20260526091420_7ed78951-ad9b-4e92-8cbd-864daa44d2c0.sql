@@ -1,0 +1,1 @@
+ALTER TYPE public.puesto_trabajo ADD VALUE IF NOT EXISTS 'reparacion_moldes';

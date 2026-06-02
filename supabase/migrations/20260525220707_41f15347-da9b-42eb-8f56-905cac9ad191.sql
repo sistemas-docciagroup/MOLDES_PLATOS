@@ -1,0 +1,1 @@
+ALTER TYPE public.estado_oficial_molde ADD VALUE IF NOT EXISTS 'bloqueado';

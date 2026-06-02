@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS puede_ver_incidencias BOOLEAN NOT NULL DEFAULT true;
