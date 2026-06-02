@@ -1,8 +1,17 @@
 # CLAUDE.md
 
-# What to do
-
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Application Overview
+
+This application is a fully responsive web app designed to monitor and control the status of the molds used in the manufacturing of resin shower trays. Its main purpose is to provide clear visibility into each mold's condition and to support preventive and corrective maintenance activities that help avoid the production of defective shower trays.
+
+The system allows users to register and track the different types of incidents associated with each mold, creating a complete maintenance history for every asset. It also records the production orders manufactured with each mold, making it easier to trace mold usage and identify potential quality issues linked to specific production runs.
+
+In addition, the application makes it possible to block molds that are under repair or temporarily unavailable, helping ensure that damaged or compromised molds are not used in production. This improves operational control and reduces the risk of defects caused by molds that are not in proper working condition.
+
+The platform also includes user access management, with roles and permissions that define which functions each user can perform within the application. This role-based access model helps maintain security, accountability, and proper separation of responsibilities across the different users of the system.
+
 
 ## Commands
 
