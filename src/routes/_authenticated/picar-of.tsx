@@ -147,15 +147,22 @@ function Page() {
   const buscarOfMut = useMutation({
     mutationFn: async (numeroOf: string) => {
       setSapData(null); setSapError(null); setSapLoading(true);
-      const [ofResult] = await Promise.all([
+      const [ofResult, sapResult] = await Promise.allSettled([
         buscarOfFn({ data: { numeroOf } }),
-        buscarOfSapFn({ data: { numeroOf } })
-          .then((sap) => { setSapData(sap); setSapLoading(false); })
-          .catch((e) => { setSapError(e instanceof Error ? e.message : "Error SAP"); setSapLoading(false); }),
+        buscarOfSapFn({ data: { numeroOf } }),
       ]);
-      return ofResult;
+      if (ofResult.status === "rejected") throw ofResult.reason;
+      return {
+        of: ofResult.value,
+        sap: sapResult.status === "fulfilled" ? sapResult.value : null,
+        sapErr: sapResult.status === "rejected" ? String((sapResult.reason as Error)?.message ?? "Error SAP") : null,
+      };
     },
-    onSuccess: async (d) => {
+    onSuccess: async ({ of: d, sap, sapErr }) => {
+      // SAP y OF en el mismo batch — evita renders intermedios con sapData=null
+      setSapLoading(false);
+      if (sap) setSapData(sap);
+      else if (sapErr) setSapError(sapErr);
       setOfData(d as OfData);
       setError(null);
 
@@ -262,8 +269,6 @@ function Page() {
         numeroOf: ofData.numero_of,
         numeroMolde,
         modelo: ofData.modelo ?? null,
-        medida: ofData.medida ?? null,
-        color: ofData.color ?? null,
       }});
     } catch (e) {
       // No bloqueamos el flujo si falla, solo avisamos
@@ -394,19 +399,9 @@ function Page() {
 
       {step === "molde" && ofData && (
         <section className="space-y-3">
-          <div className="rounded-xl border border-border bg-card px-3 py-2 flex items-center gap-2 flex-wrap text-xs">
-            <span className="text-[10px] uppercase text-muted-foreground">OF</span>
-            <span className="font-semibold text-sm">{ofData.numero_of}</span>
-            {(!sapData || sapData.configurable) && (
-              <>
-                <span className="text-muted-foreground">·</span>
-                <span><span className="text-muted-foreground">Modelo</span> <b>{ofData.modelo}</b></span>
-                <span className="text-muted-foreground">·</span>
-                <span><span className="text-muted-foreground">Medida</span> <b>{ofData.medida}</b></span>
-                <span className="text-muted-foreground">·</span>
-                <span><span className="text-muted-foreground">Color</span> <b>{ofData.color}</b></span>
-              </>
-            )}
+          <div className="rounded-xl border border-border bg-card px-4 py-3 flex items-center gap-2 flex-wrap text-xs">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">OF</span>
+            <span className="font-bold text-lg">{ofData.numero_of}</span>
           </div>
 
           {/* Datos SAP */}

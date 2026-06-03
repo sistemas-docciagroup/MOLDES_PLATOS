@@ -49,8 +49,8 @@ export function PermisosProvider({ children }: { children: ReactNode }) {
 
 export function usePermisosMap() {
   const ctx = useContext(PermisosContext);
-  if (ctx) return ctx;
-  return usePermisosMapQuery();
+  if (!ctx) throw new Error("usePermisosMap must be used within PermisosProvider");
+  return ctx;
 }
 
 export function resolveScope(roles: Rol[], puesto: Puesto | null | undefined): PermisoScope | "admin" | null {

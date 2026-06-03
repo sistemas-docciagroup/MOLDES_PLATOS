@@ -6,7 +6,7 @@ import Menu from "lucide-react/dist/esm/icons/menu";
 import X from "lucide-react/dist/esm/icons/x";
 import RefreshCw from "lucide-react/dist/esm/icons/refresh-cw";
 import ArrowLeft from "lucide-react/dist/esm/icons/arrow-left";
-import { mockAuth } from "@/lib/mock-auth";
+import { mockAuth, SESSION_KEY } from "@/lib/mock-auth";
 import { AuthProvider, useAuth } from "@/lib/use-auth";
 import { puestoLabel } from "@/lib/constants";
 import { PermisosProvider, useCanShowButton, useRefreshPermisos } from "@/lib/use-permisos";
@@ -18,7 +18,7 @@ const MENU_ITEM_CLS = "flex items-center gap-3 rounded-lg px-3 py-3 text-sm font
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: () => {
     if (typeof window === "undefined") return;
-    const raw = localStorage.getItem("app_session");
+    const raw = localStorage.getItem(SESSION_KEY);
     if (!raw) throw redirect({ to: "/login" });
   },
   component: AuthLayout,
@@ -43,6 +43,17 @@ function AuthLayoutContent() {
   const refreshPermisos = useRefreshPermisos();
   const [menuOpen, setMenuOpen] = useState(false);
   const isHome = location.pathname === "/";
+
+  const menuItems = useMemo(
+    () => getNavEntriesForSurface("menu").filter((item) => {
+      if (!ready && item.buttonId) return false;
+      if (item.onlyScope === "admin" && scope !== "admin") return false;
+      if (item.buttonId && !can(item.buttonId)) return false;
+      if (item.buttonId && HOME_BUTTON_IDS.includes(item.buttonId)) return false;
+      return true;
+    }),
+    [ready, scope, can],
+  );
 
   useEffect(() => {
     if (!loading && !user) {
@@ -78,17 +89,6 @@ function AuthLayoutContent() {
 
 
   const closeMenu = () => setMenuOpen(false);
-
-  const menuItems = useMemo(
-    () => getNavEntriesForSurface("menu").filter((item) => {
-      if (!ready && item.buttonId) return false;
-      if (item.onlyScope === "admin" && scope !== "admin") return false;
-      if (item.buttonId && !can(item.buttonId)) return false;
-      if (item.buttonId && HOME_BUTTON_IDS.includes(item.buttonId)) return false;
-      return true;
-    }),
-    [ready, scope, can],
-  );
 
   return (
     <div className="min-h-screen bg-background text-foreground">

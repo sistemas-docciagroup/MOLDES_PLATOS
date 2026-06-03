@@ -69,14 +69,7 @@ function Page() {
     queryKey: ["estado-molde-canales", moldeTrim],
     enabled: !!moldeTrim,
     staleTime: 10_000,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("estado_actual_molde")
-        .select("estado_basicos, estado_delicados")
-        .eq("numero_molde", moldeTrim)
-        .maybeSingle();
-      return data;
-    },
+    queryFn: async () => null, // TODO: conectar a DB real (antes usaba Supabase)
   });
   const estBas = (estadoMolde?.estado_basicos ?? "ok") as EstadoCanal;
   const estDel = (estadoMolde?.estado_delicados ?? "ok") as EstadoCanal;

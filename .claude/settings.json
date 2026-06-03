@@ -10,7 +10,12 @@
       "Bash(gh repo *)",
       "Bash(node -e \"console.log\\(require\\('./node_modules/lucide-react/package.json'\\).version\\)\")",
       "Bash(node -e \"const p=require\\('./node_modules/lucide-react/package.json'\\); console.log\\(JSON.stringify\\({types:p.types,exports:p.exports&&Object.keys\\(p.exports\\).slice\\(0,8\\)},null,2\\)\\)\")",
-      "Bash(node -e \"const p=require\\('./node_modules/lucide-react/package.json'\\); const exp=p.exports||{}; const k=Object.keys\\(exp\\).slice\\(0,10\\); console.log\\(k\\); if\\(exp['.']\\) console.log\\('root:',JSON.stringify\\(exp['.']\\)\\)\")"
+      "Bash(node -e \"const p=require\\('./node_modules/lucide-react/package.json'\\); const exp=p.exports||{}; const k=Object.keys\\(exp\\).slice\\(0,10\\); console.log\\(k\\); if\\(exp['.']\\) console.log\\('root:',JSON.stringify\\(exp['.']\\)\\)\")",
+      "Bash(pnpm run *)",
+      "Bash(curl -s http://localhost:3000/)",
+      "Bash(pnpm exec *)",
+      "Bash(node -e ' *)",
+      "Bash(grep -v \"Use \\\\`node\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\jatorres\\.claude\\projects\\c--Users-jatorres-Documents-CLAUDE-CODE-LOVABLE-PLATOS\\memory"

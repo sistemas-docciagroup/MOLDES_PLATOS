@@ -1,10 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { getPool, sql } from "@/integrations/sqlserver/client.server";
 import { resolveDemoOf } from "./of-demo";
 import {
   moldes, estadosMolde, reparaciones, recomendacionesMolde,
-  incidencias, fabricaciones, picadasOf, alertasVistas, ofMoldesAsignados, colores,
+  incidencias, picadasOf, alertasVistas, colores,
 } from "./mock-db";
 
 function id() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
@@ -120,28 +121,41 @@ export const historialMolde = createServerFn({ method: "POST" })
 export const registrarFabricacion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({
-    numeroOf: z.string().min(1).max(120),
-    modelo: z.string().max(120).nullable().optional(),
-    medida: z.string().max(60).nullable().optional(),
-    color: z.string().max(60).nullable().optional(),
-    numeroMolde: z.string().min(1).max(120),
-    resultado: z.enum(FABRICACION_RESULTADO_VALUES),
+    numeroOf:        z.string().min(1).max(120),
+    modelo:          z.string().max(120).nullable().optional(),
+    numeroMolde:     z.string().min(1).max(120),
+    resultado:       z.enum(FABRICACION_RESULTADO_VALUES),
     textoIncidencia: z.string().max(2000).nullable().optional(),
-    observacion: z.string().max(2000).nullable().optional(),
-    incidenciaId: z.string().nullable().optional(),
-    reparacionId: z.string().nullable().optional(),
+    observacion:     z.string().max(2000).nullable().optional(),
+    incidenciaId:    z.string().nullable().optional(),
+    reparacionId:    z.string().nullable().optional(),
   }).parse(input))
-  .handler(async ({ data }) => {
-    const row = {
-      id: id(), numero_of: data.numeroOf.trim(), modelo: data.modelo ?? null, medida: data.medida ?? null,
-      color: data.color ?? null, numero_molde: data.numeroMolde.trim(), usuario_id: "admin-001",
-      usuario_nombre: "Administrador", puesto: null, resultado: data.resultado,
-      texto_incidencia: data.textoIncidencia ?? null, observacion: data.observacion ?? null,
-      incidencia_id: data.incidenciaId ?? null, reparacion_id: data.reparacionId ?? null,
-      fecha_hora: new Date().toISOString(), eliminada: false, motivo_eliminacion: null,
-    };
-    fabricaciones.push(row);
-    return row;
+  .handler(async ({ data, context }) => {
+    const pool   = await getPool();
+    const rowId  = id();
+    const userId = context.userId;
+
+    await pool.request()
+      .input("id",               sql.NVarChar, rowId)
+      .input("numero_of",        sql.NVarChar, data.numeroOf.trim())
+      .input("numero_molde",     sql.NVarChar, data.numeroMolde.trim())
+      .input("modelo",           sql.NVarChar, data.modelo ?? null)
+      .input("usuario_id",       sql.NVarChar, userId)
+      .input("resultado",        sql.NVarChar, data.resultado)
+      .input("texto_incidencia", sql.NVarChar, data.textoIncidencia ?? null)
+      .input("observacion",      sql.NVarChar, data.observacion ?? null)
+      .input("incidencia_id",    sql.NVarChar, data.incidenciaId ?? null)
+      .input("reparacion_id",    sql.NVarChar, data.reparacionId ?? null)
+      .query(`
+        INSERT INTO fabricaciones
+          (id, numero_of, numero_molde, modelo, usuario_id, resultado,
+           texto_incidencia, observacion, incidencia_id, reparacion_id)
+        VALUES
+          (@id, @numero_of, @numero_molde, @modelo, @usuario_id, @resultado,
+           @texto_incidencia, @observacion, @incidencia_id, @reparacion_id)
+      `);
+
+    return { id: rowId, numero_of: data.numeroOf.trim(), numero_molde: data.numeroMolde.trim() };
   });
 
 export const mandarReparacionRapida = createServerFn({ method: "POST" })
@@ -226,20 +240,55 @@ export const actualizarEstadoCanal = createServerFn({ method: "POST" })
 export const obtenerMoldeDeOf = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ numeroOf: z.string().min(1).max(120) }).parse(input))
-  .handler(async ({ data }) => ofMoldesAsignados.find((r) => r.numero_of === data.numeroOf.trim()) ?? null);
+  .handler(async ({ data }) => {
+    const pool = await getPool();
+    const res = await pool.request()
+      .input("numero_of", sql.NVarChar, data.numeroOf.trim())
+      .query(`
+        SELECT numero_of, numero_molde, modelo,
+               asignado_por_id, asignado_por_nombre, puesto, created_at
+        FROM   of_moldes_asignados
+        WHERE  numero_of = @numero_of
+      `);
+    const row = res.recordset[0];
+    if (!row) return null;
+    return {
+      numero_of:           row.numero_of,
+      numero_molde:        row.numero_molde,
+      modelo:              row.modelo ?? null,
+      asignado_por_id:     row.asignado_por_id ?? null,
+      asignado_por_nombre: row.asignado_por_nombre ?? null,
+      puesto:              row.puesto ?? null,
+      created_at:          row.created_at?.toISOString() ?? null,
+    };
+  });
 
 export const asignarMoldeAOf = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({
-    numeroOf: z.string().min(1).max(120), numeroMolde: z.string().min(1).max(120),
-    modelo: z.string().max(120).nullable().optional(), medida: z.string().max(60).nullable().optional(),
-    color: z.string().max(60).nullable().optional(),
+    numeroOf:    z.string().min(1).max(120),
+    numeroMolde: z.string().min(1).max(120),
+    modelo:      z.string().max(120).nullable().optional(),
   }).parse(input))
-  .handler(async ({ data }) => {
-    const numeroOf = data.numeroOf.trim();
-    const idx = ofMoldesAsignados.findIndex((r) => r.numero_of === numeroOf);
-    const payload = { numero_of: numeroOf, numero_molde: data.numeroMolde.trim(), modelo: data.modelo ?? null, medida: data.medida ?? null, color: data.color ?? null, asignado_por_id: "admin-001", asignado_por_nombre: "Administrador", puesto: null, created_at: new Date().toISOString() };
-    if (idx >= 0) ofMoldesAsignados[idx] = payload; else ofMoldesAsignados.push(payload);
+  .handler(async ({ data, context }) => {
+    const pool = await getPool();
+    await pool.request()
+      .input("numero_of",       sql.NVarChar, data.numeroOf.trim())
+      .input("numero_molde",    sql.NVarChar, data.numeroMolde.trim())
+      .input("modelo",          sql.NVarChar, data.modelo ?? null)
+      .input("asignado_por_id", sql.NVarChar, context.userId)
+      .query(`
+        MERGE of_moldes_asignados WITH (HOLDLOCK) AS target
+        USING (SELECT @numero_of AS numero_of) AS src ON target.numero_of = src.numero_of
+        WHEN MATCHED THEN
+          UPDATE SET numero_molde    = @numero_molde,
+                     modelo          = @modelo,
+                     asignado_por_id = @asignado_por_id,
+                     updated_at      = GETDATE()
+        WHEN NOT MATCHED THEN
+          INSERT (numero_of, numero_molde, modelo, asignado_por_id)
+          VALUES (@numero_of, @numero_molde, @modelo, @asignado_por_id);
+      `);
     return { ok: true };
   });
 

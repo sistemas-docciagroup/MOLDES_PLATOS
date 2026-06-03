@@ -24,6 +24,33 @@ export type AuthState = {
   isAdmin: boolean;
 };
 
+function sessionToProfile(s: ReturnType<typeof mockAuth.getFullSession>): {
+  profile: Profile | null;
+  roles: Rol[];
+  isAdmin: boolean;
+  isStaff: boolean;
+} {
+  if (!s) return { profile: null, roles: [], isAdmin: false, isStaff: false };
+  const roles: Rol[] = [s.rol];
+  const isAdmin = roles.includes("administrador");
+  return {
+    profile: {
+      id: s.id,
+      nombre: s.nombre,
+      email: s.username,
+      puesto: s.puesto,
+      activo: s.activo,
+      puede_ver_moldes: s.puede_ver_moldes,
+      puede_ver_historial: s.puede_ver_historial,
+      puede_crear_incidencias: s.puede_crear_incidencias,
+      flujo_picar: s.flujo_picar,
+    },
+    roles,
+    isAdmin,
+    isStaff: isAdmin || roles.includes("encargado"),
+  };
+}
+
 function useAuthState(): AuthState {
   const [user, setUser] = useState<MockUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,18 +58,22 @@ function useAuthState(): AuthState {
   useEffect(() => {
     const stored = mockAuth.getFullSession();
 
-    getServerEpoch().then(({ epoch }) => {
-      if (stored && stored.serverEpoch !== epoch) {
-        mockAuth.signOut();
-      } else {
+    // Validar epoch del servidor para detectar reinicios
+    getServerEpoch()
+      .then(({ epoch }) => {
+        if (stored && stored.serverEpoch !== epoch) {
+          mockAuth.signOut();
+        } else {
+          setUser(mockAuth.getSession());
+        }
+      })
+      .catch(() => {
+        // Si el servidor no responde, mantener sesión local (más permisivo que limpiarla)
         setUser(mockAuth.getSession());
-      }
-      setLoading(false);
-    }).catch(() => {
-      // Si no se puede contactar el servidor, limpiar sesión por seguridad
-      mockAuth.signOut();
-      setLoading(false);
-    });
+      })
+      .finally(() => {
+        setLoading(false);
+      });
 
     const unsubscribe = mockAuth.onAuthStateChange((nextUser) => {
       setUser(nextUser);
@@ -51,27 +82,10 @@ function useAuthState(): AuthState {
     return unsubscribe;
   }, []);
 
-  // useMemo evita parsear localStorage en cada render — solo recalcula cuando user cambia
-  const { profile, roles, isAdmin, isStaff } = useMemo(() => {
-    const fullSession = user ? mockAuth.getFullSession() : null;
-    const profile: Profile | null = fullSession
-      ? {
-          id:                       fullSession.id,
-          nombre:                   fullSession.nombre,
-          email:                    fullSession.username,
-          puesto:                   fullSession.puesto,
-          activo:                   fullSession.activo,
-          puede_ver_moldes:         fullSession.puede_ver_moldes,
-          puede_ver_historial:      fullSession.puede_ver_historial,
-          puede_crear_incidencias:  fullSession.puede_crear_incidencias,
-          flujo_picar:              fullSession.flujo_picar,
-        }
-      : null;
-    const roles: Rol[] = fullSession ? [fullSession.rol] : [];
-    const isAdmin = roles.includes("administrador");
-    const isStaff = isAdmin || roles.includes("encargado");
-    return { profile, roles, isAdmin, isStaff };
-  }, [user]);
+  const { profile, roles, isAdmin, isStaff } = useMemo(
+    () => sessionToProfile(user ? mockAuth.getFullSession() : null),
+    [user],
+  );
 
   return { loading, user, profile, roles, isStaff, isAdmin };
 }
@@ -85,6 +99,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth(): AuthState {
   const ctx = useContext(AuthContext);
-  if (ctx) return ctx;
-  return useAuthState();
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+  return ctx;
 }

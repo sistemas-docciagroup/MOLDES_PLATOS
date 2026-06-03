@@ -129,18 +129,21 @@ En este caso interesan los siguientes datos del response:
 ## Implementación en el proyecto
 
 - **Server function:** `src/lib/sap.functions.ts` → `buscarOfSap({ data: { numeroOf } })`
-- **Tipo de retorno:** `SapOfData { of, descripcion, configurable, configuracion: [{atbez, atwtb}] }`
+- **Tipo público al cliente:** `SapOfData { of, descripcion, configurable, configuracion: [{atbez, atwtb}] }`
 - **Integración:** `src/routes/_authenticated/picar-of.tsx` — se llama en paralelo con `buscarOf` al pulsar "Buscar OF". El resultado se muestra en la tarjeta de info de la OF (step "molde").
 - **Parsing:** regex sobre el XML de respuesta (sin dependencias externas).
+- **Persistencia en DB:** tras cada llamada SAP se guardan todos los campos en:
+  - `sap_of_material` — cabecera (UPSERT por `numero_of`)
+  - `sap_of_configuracion` — ítems de configuración (DELETE + INSERT por `numero_of`)
+  - La persistencia es asíncrona y no bloquea la respuesta al cliente.
 
 ### Reglas de visualización en pantalla
 
 | `E_CONFIGURABLE` | Mostrar en cabecera OF | Mostrar tarjeta SAP |
 |---|---|---|
-| `''` (vacío) | Solo OF | Sí — solo `E_DESCRIPCION` |
-| `X` | OF, Modelo, Medida y Color | Sí — `E_DESCRIPCION` + lista `ATBEZ` / `ATWTB` |
+| Cualquier valor | Solo OF | Sí — `E_DESCRIPCION` y, si `E_CONFIGURABLE = X`, lista `ATBEZ` / `ATWTB` |
 
-Cuando `E_CONFIGURABLE = ''`, las etiquetas **Modelo**, **Medida** y **Color** se ocultan de la cabecera porque la descripción completa del material ya viene en la tarjeta SAP.
+La cabecera muestra **únicamente el número de OF** en todos los casos. La descripción completa del material viene siempre en la tarjeta SAP.
 
 ## Observaciones
 - La estructura de `E_CONFIGURACION` es repetitiva y debe tratarse como colección.
