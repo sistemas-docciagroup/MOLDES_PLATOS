@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Code2 } from "lucide-react";
 import { mockAuth } from "@/lib/mock-auth";
@@ -49,10 +49,6 @@ function LoginPage() {
             {loading ? "Entrando..." : "Entrar"}
           </Button>
         </form>
-        <p className="text-center text-sm text-muted-foreground">
-          ¿No tienes cuenta?{" "}
-          <Link to="/signup" className="text-primary underline">Regístrate</Link>
-        </p>
       </div>
     </main>
   );

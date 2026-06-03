@@ -1,4 +1,4 @@
-import { createFileRoute, Link, Outlet, useLocation, useNavigate, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect, useLocation, useNavigate, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Loader2, LogOut, Menu, X, RefreshCw, ArrowLeft } from "lucide-react";
 import { mockAuth } from "@/lib/mock-auth";
@@ -7,7 +7,14 @@ import { puestoLabel } from "@/lib/constants";
 import { PermisosProvider, useCanShowButton, useRefreshPermisos } from "@/lib/use-permisos";
 import { HOME_BUTTON_IDS, getNavEntriesForSurface, renderNavEntry } from "@/lib/navigation-permissions";
 
-export const Route = createFileRoute("/_authenticated")({ component: AuthLayout });
+export const Route = createFileRoute("/_authenticated")({
+  beforeLoad: () => {
+    if (typeof window === "undefined") return;
+    const raw = localStorage.getItem("app_session");
+    if (!raw) throw redirect({ to: "/login" });
+  },
+  component: AuthLayout,
+});
 
 function AuthLayout() {
   return (

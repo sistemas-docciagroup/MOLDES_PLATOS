@@ -8,7 +8,6 @@ import {
 import { RouteGuard } from "@/components/PermissionGate";
 import { useAuth } from "@/lib/use-auth";
 import { useCanShowButton } from "@/lib/use-permisos";
-import { supabase } from "@/integrations/supabase/client";
 import {
   buscarOf, registrarFabricacion, mandarReparacionRapida, evaluarFabricacion,
   obtenerMoldeDeOf, asignarMoldeAOf, alertasPendientesMolde, marcarAlertaVista,
@@ -17,6 +16,7 @@ import { crearRecomendacionBloqueo, desbloquearCanal } from "@/lib/recomendacion
 import { processAudioIncidencia, saveIncidencia } from "@/lib/incidencias.functions";
 import { listarMoldesDisponibles } from "@/lib/moldes.functions";
 import { clasificarColor } from "@/lib/colores.functions";
+import { buscarOfSap, type SapOfData } from "@/lib/sap.functions";
 import { PUESTOS, type Puesto } from "@/lib/constants";
 import { toast } from "sonner";
 
@@ -92,6 +92,7 @@ function Page() {
   const esPreparacion = puestoActual === "preparacion_molde" || scope === "admin";
 
   const buscarOfFn = useServerFn(buscarOf);
+  const buscarOfSapFn = useServerFn(buscarOfSap);
   const listarMoldesFn = useServerFn(listarMoldesDisponibles);
   const registrarFabFn = useServerFn(registrarFabricacion);
   const mandarRepFn = useServerFn(mandarReparacionRapida);
@@ -117,6 +118,9 @@ function Page() {
   const [evaluacion, setEvaluacion] = useState<Evaluacion | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [sapData, setSapData] = useState<SapOfData | null>(null);
+  const [sapError, setSapError] = useState<string | null>(null);
+  const [sapLoading, setSapLoading] = useState(false);
 
   const [showIncidencia, setShowIncidencia] = useState(false);
   const [showObservacion, setShowObservacion] = useState(false);
@@ -129,7 +133,16 @@ function Page() {
 
 
   const buscarOfMut = useMutation({
-    mutationFn: (numeroOf: string) => buscarOfFn({ data: { numeroOf } }),
+    mutationFn: async (numeroOf: string) => {
+      setSapData(null); setSapError(null); setSapLoading(true);
+      const [ofResult] = await Promise.all([
+        buscarOfFn({ data: { numeroOf } }),
+        buscarOfSapFn({ data: { numeroOf } })
+          .then((sap) => { setSapData(sap); setSapLoading(false); })
+          .catch((e) => { setSapError(e instanceof Error ? e.message : "Error SAP"); setSapLoading(false); }),
+      ]);
+      return ofResult;
+    },
     onSuccess: async (d) => {
       setOfData(d as OfData);
       setError(null);
@@ -225,7 +238,7 @@ function Page() {
   const resetAll = () => {
     setStep("of"); setOfInput(""); setOfData(null); setMoldeAsignadoOf(null); setMoldesDisp([]);
     setMoldeSel(null); setMoldeManual(""); setColorClass(null); setEvaluacion(null);
-    setError(null); setInfo(null);
+    setError(null); setInfo(null); setSapData(null); setSapError(null);
     setShowIncidencia(false); setShowObservacion(false); setShowReparacion(false);
     setShowBloqueo(null); setShowAlertas(false);
   };
@@ -363,6 +376,18 @@ function Page() {
             {buscarOfMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanLine className="h-4 w-4" />}
             Buscar OF
           </button>
+
+          {/* Resultado SAP - visible mientras se resuelve y en el paso "of" */}
+          {sapLoading && (
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Consultando SAP…
+            </div>
+          )}
+          {sapError && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              SAP: {sapError}
+            </div>
+          )}
         </section>
       )}
 
@@ -371,13 +396,45 @@ function Page() {
           <div className="rounded-xl border border-border bg-card px-3 py-2 flex items-center gap-2 flex-wrap text-xs">
             <span className="text-[10px] uppercase text-muted-foreground">OF</span>
             <span className="font-semibold text-sm">{ofData.numero_of}</span>
-            <span className="text-muted-foreground">·</span>
-            <span><span className="text-muted-foreground">Modelo</span> <b>{ofData.modelo}</b></span>
-            <span className="text-muted-foreground">·</span>
-            <span><span className="text-muted-foreground">Medida</span> <b>{ofData.medida}</b></span>
-            <span className="text-muted-foreground">·</span>
-            <span><span className="text-muted-foreground">Color</span> <b>{ofData.color}</b></span>
+            {(!sapData || sapData.configurable) && (
+              <>
+                <span className="text-muted-foreground">·</span>
+                <span><span className="text-muted-foreground">Modelo</span> <b>{ofData.modelo}</b></span>
+                <span className="text-muted-foreground">·</span>
+                <span><span className="text-muted-foreground">Medida</span> <b>{ofData.medida}</b></span>
+                <span className="text-muted-foreground">·</span>
+                <span><span className="text-muted-foreground">Color</span> <b>{ofData.color}</b></span>
+              </>
+            )}
           </div>
+
+          {/* Datos SAP */}
+          {sapLoading && (
+            <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Consultando SAP…
+            </div>
+          )}
+          {sapData && (
+            <div className="rounded-xl border border-border bg-card px-4 py-3 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Material SAP</p>
+              <p className="text-base font-bold leading-snug">{sapData.descripcion || "—"}</p>
+              {sapData.configurable && sapData.configuracion.length > 0 && (
+                <ul className="mt-1 space-y-1">
+                  {sapData.configuracion.map((c, i) => (
+                    <li key={i} className="flex items-center justify-between gap-2 text-sm">
+                      <span className="text-muted-foreground">{c.atbez}</span>
+                      <span className="font-medium">{c.atwtb}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+          {sapError && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              SAP: {sapError}
+            </div>
+          )}
 
 
           {flujoProducto ? (
@@ -1087,14 +1144,9 @@ function ReparacionDialog({ numeroMolde, numeroOf, userId, onClose, onSaved, man
     setPreviews(previews.filter((_, x) => x !== i));
   };
 
-  const uploadOne = async (file: File): Promise<{ url: string; name: string } | null> => {
-    if (!userId) return null;
-    const ext = file.name.split(".").pop() || "jpg";
-    const name = `${userId}/reparacion-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const { error } = await supabase.storage.from("incidencias-fotos").upload(name, file, { contentType: file.type });
-    if (error) throw new Error(error.message);
-    const { data } = supabase.storage.from("incidencias-fotos").getPublicUrl(name);
-    return { url: data.publicUrl, name: file.name };
+  // TODO: conectar a almacenamiento real cuando esté disponible
+  const uploadOne = async (_file: File): Promise<{ url: string; name: string } | null> => {
+    return null;
   };
 
   const guardar = async () => {
@@ -1420,14 +1472,8 @@ function BloqueoDialog({ canal, numeroMolde, puesto, processFn, onClose, onSave 
     setSaving(true); setError(null);
     try {
       let fotoUrl: string | null = null;
-      if (fotoFile) {
-        const ext = fotoFile.name.split(".").pop() || "jpg";
-        const path = `bloqueos/${numeroMolde}-${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from("incidencias-fotos").upload(path, fotoFile);
-        if (upErr) throw new Error(upErr.message);
-        const { data: pub } = supabase.storage.from("incidencias-fotos").getPublicUrl(path);
-        fotoUrl = pub.publicUrl;
-      }
+      // TODO: subir foto a almacenamiento real cuando esté disponible
+      void fotoFile;
       await onSave({ motivo: motivo.trim(), transcripcion, fotoUrl });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al guardar.");

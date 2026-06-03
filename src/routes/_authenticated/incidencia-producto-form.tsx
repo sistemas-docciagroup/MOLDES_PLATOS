@@ -6,7 +6,6 @@ import { CanalBadge, type EstadoCanal } from "@/components/CanalesBadges";
 import { ArrowLeft, Mic, Square, Loader2, CheckCircle2, XCircle, Camera, X, PackageOpen, ScanLine, Pencil, Ban, ShieldAlert, Boxes, Factory, Check } from "lucide-react";
 import { processAudioProducto, saveIncidenciaProducto } from "@/lib/incidencias-producto.functions";
 import { listarDefectos } from "@/lib/defectos.functions";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/use-auth";
 import { RouteGuard } from "@/components/PermissionGate";
 
@@ -152,14 +151,9 @@ function Page() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const uploadPhoto = async () => {
-    if (!photoFile || !user) return null;
-    const ext = photoFile.name.split(".").pop() || "jpg";
-    const name = `${user.id}/producto-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const { error } = await supabase.storage.from("incidencias-fotos").upload(name, photoFile, { contentType: photoFile.type });
-    if (error) throw new Error(error.message);
-    const { data } = supabase.storage.from("incidencias-fotos").getPublicUrl(name);
-    return { foto_url: data.publicUrl, foto_nombre: photoFile.name };
+  // TODO: conectar a almacenamiento real cuando esté disponible
+  const uploadPhoto = async (): Promise<{ foto_url: string; foto_nombre: string } | null> => {
+    return null;
   };
 
   const resetForm = () => {

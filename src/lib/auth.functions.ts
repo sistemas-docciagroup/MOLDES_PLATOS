@@ -4,6 +4,13 @@ import bcrypt from "bcryptjs";
 import { getPool, sql } from "@/integrations/sqlserver/client.server";
 import type { Puesto, Rol } from "./constants";
 
+// ID único generado al arrancar el servidor. Cambia en cada reinicio.
+const SERVER_EPOCH = Math.random().toString(36).slice(2);
+
+export const getServerEpoch = createServerFn({ method: "GET" }).handler(
+  async () => ({ epoch: SERVER_EPOCH })
+);
+
 export type UsuarioSession = {
   id: string;
   username: string;
@@ -15,6 +22,7 @@ export type UsuarioSession = {
   puede_ver_historial: boolean;
   puede_crear_incidencias: boolean;
   flujo_picar: "moldes" | "producto";
+  serverEpoch: string;
 };
 
 export const signInFn = createServerFn({ method: "POST" })
@@ -52,5 +60,6 @@ export const signInFn = createServerFn({ method: "POST" })
       puede_ver_historial:      Boolean(row.puede_ver_historial),
       puede_crear_incidencias:  Boolean(row.puede_crear_incidencias),
       flujo_picar:              row.flujo_picar === "producto" ? "producto" : "moldes",
+      serverEpoch:              SERVER_EPOCH,
     };
   });

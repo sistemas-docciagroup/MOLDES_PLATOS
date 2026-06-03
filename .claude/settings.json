@@ -3,7 +3,13 @@
     "allow": [
       "PowerShell(Set-Location \"c:\\\\Users\\\\jatorres\\\\Documents\\\\CLAUDE_CODE\\\\LOVABLE_PLATOS\"; node setup-db.mjs 2>&1 | Where-Object { $_ -notmatch \"DeprecationWarning|DEP0123|CategoryInfo|FullyQualified|NativeCommand|trace-deprecation\" })",
       "PowerShell(Get-Process -Name \"node\" -ErrorAction SilentlyContinue)",
-      "PowerShell(Stop-Process -Force -ErrorAction SilentlyContinue)"
+      "PowerShell(Stop-Process -Force -ErrorAction SilentlyContinue)",
+      "Bash(Get-ChildItem -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(Format-Table -HideTableHeaders)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\jatorres\\.claude\\projects\\c--Users-jatorres-Documents-CLAUDE-CODE-LOVABLE-PLATOS\\memory"
     ]
   }
 }

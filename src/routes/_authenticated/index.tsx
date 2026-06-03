@@ -7,10 +7,10 @@ import { useQuery } from "@tanstack/react-query";
 import { processAudioIncidencia, saveIncidencia } from "@/lib/incidencias.functions";
 import { statsIncidenciasProducto } from "@/lib/incidencias-producto.functions";
 import { useAuth } from "@/lib/use-auth";
+import { mockAuth } from "@/lib/mock-auth";
 import { PUESTOS } from "@/lib/constants";
 import { useCanShowButton, usePreviewPuesto } from "@/lib/use-permisos";
 import { AccesosGrid } from "@/components/AccesosGrid";
-import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/")({ component: HomePage });
 
@@ -51,14 +51,9 @@ export function HomePage() {
     setFotos((f) => f.filter((_, x) => x !== i));
     setPreviews((p) => p.filter((_, x) => x !== i));
   };
-  const uploadFoto = async (file: File): Promise<{ foto_url: string; foto_nombre: string } | null> => {
-    if (!user?.id) return null;
-    const ext = file.name.split(".").pop() || "jpg";
-    const name = `${user.id}/reparacion-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const { error } = await supabase.storage.from("incidencias-fotos").upload(name, file, { contentType: file.type });
-    if (error) throw new Error(error.message);
-    const { data } = supabase.storage.from("incidencias-fotos").getPublicUrl(name);
-    return { foto_url: data.publicUrl, foto_nombre: file.name };
+  // TODO: conectar a almacenamiento real cuando esté disponible
+  const uploadFoto = async (_file: File): Promise<{ foto_url: string; foto_nombre: string } | null> => {
+    return null;
   };
 
   const puestoInfo = PUESTOS.find((p) => p.value === profile?.puesto);
@@ -282,8 +277,7 @@ function PicarOfDropdown({ isAdmin, puestoUsuario }: { isAdmin: boolean; puestoU
   const { data: stats } = useQuery({
     queryKey: ["incidencias-producto-stats"],
     queryFn: async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session?.access_token) return { byPuesto: {} as Record<string, number> };
+      if (!mockAuth.getSession()) return { byPuesto: {} as Record<string, number> };
       try { return await statsFn(); } catch { return { byPuesto: {} as Record<string, number> }; }
     },
     enabled: !!user,

@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
 import { createContext, createElement, useContext, type ReactNode } from "react";
 import { useAuth } from "./use-auth";
-import type { ButtonId, PermisoScope } from "./buttons";
+import { BUTTONS, PERMISO_SCOPES, type ButtonId, type PermisoScope } from "./buttons";
 import type { Rol, Puesto } from "./constants";
 
 export type PermisoRow = {
@@ -12,8 +12,21 @@ export type PermisoRow = {
 
 export type PermisoMap = Record<string, Record<string, boolean>>;
 
+// Mock permisivo: todos los botones visibles para todos los puestos hasta que
+// la tabla permisos_puesto_botones esté conectada a la DB.
+function buildMockPermisos(): PermisoMap {
+  const allButtons = BUTTONS.reduce<Record<string, boolean>>((acc, b) => {
+    acc[b.id] = true;
+    return acc;
+  }, {});
+  return PERMISO_SCOPES.reduce<PermisoMap>((acc, scope) => {
+    acc[scope] = { ...allButtons };
+    return acc;
+  }, {});
+}
+
 async function fetchPermisos(): Promise<PermisoMap> {
-  return {};
+  return buildMockPermisos();
 }
 
 function usePermisosMapQuery() {

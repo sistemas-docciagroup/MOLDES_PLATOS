@@ -1,5 +1,6 @@
 import { createContext, createElement, useContext, useEffect, useState, type ReactNode } from "react";
 import { mockAuth, type MockUser } from "./mock-auth";
+import { getServerEpoch } from "./auth.functions";
 import type { Puesto, Rol } from "./constants";
 
 export type Profile = {
@@ -28,8 +29,20 @@ function useAuthState(): AuthState {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setUser(mockAuth.getSession());
-    setLoading(false);
+    const stored = mockAuth.getFullSession();
+
+    getServerEpoch().then(({ epoch }) => {
+      if (stored && stored.serverEpoch !== epoch) {
+        mockAuth.signOut();
+      } else {
+        setUser(mockAuth.getSession());
+      }
+      setLoading(false);
+    }).catch(() => {
+      // Si no se puede contactar el servidor, limpiar sesión por seguridad
+      mockAuth.signOut();
+      setLoading(false);
+    });
 
     const unsubscribe = mockAuth.onAuthStateChange((nextUser) => {
       setUser(nextUser);

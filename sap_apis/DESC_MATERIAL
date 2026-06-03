@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:sap-com:document:sap:rfc:functions">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <urn:Z_GETDESCRIPCION_MATERIAL>
+         <I_OF>8746853</I_OF>
+      </urn:Z_GETDESCRIPCION_MATERIAL>
+   </soapenv:Body>
+</soapenv:Envelope>
