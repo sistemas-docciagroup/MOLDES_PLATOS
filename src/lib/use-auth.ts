@@ -1,4 +1,4 @@
-import { createContext, createElement, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, createElement, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { mockAuth, type MockUser } from "./mock-auth";
 import { getServerEpoch } from "./auth.functions";
 import type { Puesto, Rol } from "./constants";
@@ -51,25 +51,27 @@ function useAuthState(): AuthState {
     return unsubscribe;
   }, []);
 
-  const fullSession = user ? mockAuth.getFullSession() : null;
-
-  const profile: Profile | null = fullSession
-    ? {
-        id:                       fullSession.id,
-        nombre:                   fullSession.nombre,
-        email:                    fullSession.username,
-        puesto:                   fullSession.puesto,
-        activo:                   fullSession.activo,
-        puede_ver_moldes:         fullSession.puede_ver_moldes,
-        puede_ver_historial:      fullSession.puede_ver_historial,
-        puede_crear_incidencias:  fullSession.puede_crear_incidencias,
-        flujo_picar:              fullSession.flujo_picar,
-      }
-    : null;
-
-  const roles: Rol[] = fullSession ? [fullSession.rol] : [];
-  const isAdmin = roles.includes("administrador");
-  const isStaff = isAdmin || roles.includes("encargado");
+  // useMemo evita parsear localStorage en cada render — solo recalcula cuando user cambia
+  const { profile, roles, isAdmin, isStaff } = useMemo(() => {
+    const fullSession = user ? mockAuth.getFullSession() : null;
+    const profile: Profile | null = fullSession
+      ? {
+          id:                       fullSession.id,
+          nombre:                   fullSession.nombre,
+          email:                    fullSession.username,
+          puesto:                   fullSession.puesto,
+          activo:                   fullSession.activo,
+          puede_ver_moldes:         fullSession.puede_ver_moldes,
+          puede_ver_historial:      fullSession.puede_ver_historial,
+          puede_crear_incidencias:  fullSession.puede_crear_incidencias,
+          flujo_picar:              fullSession.flujo_picar,
+        }
+      : null;
+    const roles: Rol[] = fullSession ? [fullSession.rol] : [];
+    const isAdmin = roles.includes("administrador");
+    const isStaff = isAdmin || roles.includes("encargado");
+    return { profile, roles, isAdmin, isStaff };
+  }, [user]);
 
   return { loading, user, profile, roles, isStaff, isAdmin };
 }

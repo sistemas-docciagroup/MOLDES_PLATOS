@@ -2,7 +2,13 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ArrowLeft, Loader2, Trash2, UserPlus, Sparkles, KeyRound, Check } from "lucide-react";
+import ArrowLeft from "lucide-react/dist/esm/icons/arrow-left";
+import Loader2 from "lucide-react/dist/esm/icons/loader-2";
+import Trash2 from "lucide-react/dist/esm/icons/trash-2";
+import UserPlus from "lucide-react/dist/esm/icons/user-plus";
+import Sparkles from "lucide-react/dist/esm/icons/sparkles";
+import KeyRound from "lucide-react/dist/esm/icons/key-round";
+import Check from "lucide-react/dist/esm/icons/check";
 import {
   listUsuarios, updateUsuarioPuesto, updateUsuarioRol, createUsuario, deleteUsuario, seedDemoUsers,
   resetUsuarioPassword, updateUsuarioActivo, updateUsuarioFlujo,

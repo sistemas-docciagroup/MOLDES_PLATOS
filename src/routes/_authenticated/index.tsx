@@ -1,6 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { X, ScanLine, Mic, Square, Loader2, ChevronDown, Camera } from "lucide-react";
+import X from "lucide-react/dist/esm/icons/x";
+import ScanLine from "lucide-react/dist/esm/icons/scan-line";
+import Mic from "lucide-react/dist/esm/icons/mic";
+import Square from "lucide-react/dist/esm/icons/square";
+import Loader2 from "lucide-react/dist/esm/icons/loader-2";
+import ChevronDown from "lucide-react/dist/esm/icons/chevron-down";
+import Camera from "lucide-react/dist/esm/icons/camera";
 import { useServerFn } from "@tanstack/react-start";
 import { useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -26,11 +32,12 @@ export function HomePage() {
   const [modo, setModo] = useState<"voz" | "texto">("voz");
   const [recording, setRecording] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
   const [transcripcion, setTranscripcion] = useState<string | null>(null);
   const mrRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const elapsedRef = useRef(0);
+  const timerDisplayRef = useRef<HTMLSpanElement>(null);
 
   const [showManual, setShowManual] = useState(false);
   const [manual, setManual] = useState({ molde: "", descripcion: "" });
@@ -42,21 +49,26 @@ export function HomePage() {
   const [info, setInfo] = useState<string | null>(null);
 
   const addFoto = (file: File) => {
-    if (fotos.length >= 2) return;
-    setFotos((f) => [...f, file]);
-    setPreviews((p) => [...p, URL.createObjectURL(file)]);
+    setFotos((prev) => {
+      if (prev.length >= 2) return prev;
+      return [...prev, file];
+    });
+    setPreviews((prev) => {
+      if (prev.length >= 2) return prev;
+      return [...prev, URL.createObjectURL(file)];
+    });
   };
   const removeFoto = (i: number) => {
-    URL.revokeObjectURL(previews[i]);
-    setFotos((f) => f.filter((_, x) => x !== i));
-    setPreviews((p) => p.filter((_, x) => x !== i));
+    setPreviews((prev) => {
+      URL.revokeObjectURL(prev[i]);
+      return prev.filter((_, x) => x !== i);
+    });
+    setFotos((prev) => prev.filter((_, x) => x !== i));
   };
   // TODO: conectar a almacenamiento real cuando esté disponible
   const uploadFoto = async (_file: File): Promise<{ foto_url: string; foto_nombre: string } | null> => {
     return null;
   };
-
-  const puestoInfo = PUESTOS.find((p) => p.value === profile?.puesto);
 
   // Disparado por el acceso rápido "Mandar reparación" (menu/home)
   useEffect(() => {
@@ -99,14 +111,20 @@ export function HomePage() {
       mr.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
         if (timerRef.current) clearInterval(timerRef.current);
+        elapsedRef.current = 0;
+        if (timerDisplayRef.current) timerDisplayRef.current.textContent = "0:00";
         setRecording(false);
         const blob = new Blob(chunksRef.current, { type: mr.mimeType || "audio/webm" });
         await procesarAudio(blob, mr.mimeType || "audio/webm");
       };
       mr.start();
       mrRef.current = mr;
-      setRecording(true); setElapsed(0);
-      timerRef.current = setInterval(() => setElapsed((s) => s + 1), 1000);
+      elapsedRef.current = 0;
+      setRecording(true);
+      timerRef.current = setInterval(() => {
+        elapsedRef.current += 1;
+        if (timerDisplayRef.current) timerDisplayRef.current.textContent = formatTime(elapsedRef.current);
+      }, 1000);
     } catch {
       setError("No se pudo acceder al micrófono.");
     }
@@ -210,7 +228,7 @@ export function HomePage() {
                   <button type="button" onClick={() => (recording ? stopRecording() : startRecording())} disabled={processing || saving}
                     className={`flex h-16 w-full items-center justify-center gap-2 rounded-md text-base font-semibold disabled:opacity-60 ${recording ? "bg-destructive text-destructive-foreground" : "bg-primary text-primary-foreground"}`}>
                     {processing ? <Loader2 className="h-6 w-6 animate-spin" /> : recording ? <Square className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
-                    {processing ? "Analizando audio…" : recording ? `Parar grabación (${formatTime(elapsed)})` : "Grabar problema con IA"}
+                    {processing ? "Analizando audio…" : recording ? <>Parar grabación (<span ref={timerDisplayRef}>0:00</span>)</> : "Grabar problema con IA"}
                   </button>
                   {transcripcion && (
                     <div className="rounded-md border border-border bg-background p-3 text-sm text-muted-foreground">

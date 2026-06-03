@@ -1,6 +1,20 @@
 import type { ComponentType, ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { BarChart3, Boxes, Eye, Search, Send, ShieldCheck, Users, Wrench, PackageOpen, ScanLine, ClipboardList, Palette, Ban, Inbox, Tag } from "lucide-react";
+import BarChart3 from "lucide-react/dist/esm/icons/bar-chart-3";
+import Boxes from "lucide-react/dist/esm/icons/boxes";
+import Eye from "lucide-react/dist/esm/icons/eye";
+import Search from "lucide-react/dist/esm/icons/search";
+import Send from "lucide-react/dist/esm/icons/send";
+import ShieldCheck from "lucide-react/dist/esm/icons/shield-check";
+import Users from "lucide-react/dist/esm/icons/users";
+import Wrench from "lucide-react/dist/esm/icons/wrench";
+import PackageOpen from "lucide-react/dist/esm/icons/package-open";
+import ScanLine from "lucide-react/dist/esm/icons/scan-line";
+import ClipboardList from "lucide-react/dist/esm/icons/clipboard-list";
+import Palette from "lucide-react/dist/esm/icons/palette";
+import Ban from "lucide-react/dist/esm/icons/ban";
+import Inbox from "lucide-react/dist/esm/icons/inbox";
+import Tag from "lucide-react/dist/esm/icons/tag";
 import type { ButtonId } from "@/lib/buttons";
 
 export type NavigationSurface = "home" | "menu" | "header" | "special-route";

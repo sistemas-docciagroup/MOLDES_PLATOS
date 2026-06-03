@@ -2,9 +2,21 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import {
-  ArrowLeft, ScanLine, AlertTriangle, CheckCircle2, XCircle, Send, Wrench, Loader2, X, Camera, Mic, Square, PackageOpen, Ban, Eye,
-} from "lucide-react";
+import ArrowLeft from "lucide-react/dist/esm/icons/arrow-left";
+import ScanLine from "lucide-react/dist/esm/icons/scan-line";
+import AlertTriangle from "lucide-react/dist/esm/icons/alert-triangle";
+import CheckCircle2 from "lucide-react/dist/esm/icons/check-circle-2";
+import XCircle from "lucide-react/dist/esm/icons/x-circle";
+import Send from "lucide-react/dist/esm/icons/send";
+import Wrench from "lucide-react/dist/esm/icons/wrench";
+import Loader2 from "lucide-react/dist/esm/icons/loader-2";
+import X from "lucide-react/dist/esm/icons/x";
+import Camera from "lucide-react/dist/esm/icons/camera";
+import Mic from "lucide-react/dist/esm/icons/mic";
+import Square from "lucide-react/dist/esm/icons/square";
+import PackageOpen from "lucide-react/dist/esm/icons/package-open";
+import Ban from "lucide-react/dist/esm/icons/ban";
+import Eye from "lucide-react/dist/esm/icons/eye";
 import { RouteGuard } from "@/components/PermissionGate";
 import { useAuth } from "@/lib/use-auth";
 import { useCanShowButton } from "@/lib/use-permisos";
@@ -146,47 +158,36 @@ function Page() {
     onSuccess: async (d) => {
       setOfData(d as OfData);
       setError(null);
-      // Cargar moldes disponibles
-      try {
-        const moldes = await listarMoldesFn({ data: { modelo: d.modelo, medida: d.medida || null } });
-        setMoldesDisp(moldes as MoldeDisponible[]);
-      } catch {
-        setMoldesDisp([]);
-      }
-      // Clasificar color
-      if (d.color) {
-        try {
-          const cls = await clasificarColorFn({ data: { color: d.color } });
-          setColorClass(cls as ColorClass);
-        } catch { setColorClass(null); }
-      } else {
-        setColorClass(null);
-      }
 
-      // Recuperar molde ya asignado a esta OF (también en flujo producto)
-      let asignadoNumero: string | null = null;
-      try {
-        const asignado = await obtenerMoldeOfFn({ data: { numeroOf: d.numero_of } });
-        if (asignado) {
-          asignadoNumero = asignado.numero_molde;
-          setMoldeAsignadoOf(asignado.numero_molde);
-          if (!flujoProducto) {
-            const moldeAsignado: MoldeDisponible = {
-              numero_molde: asignado.numero_molde,
-              medida: asignado.medida ?? d.medida ?? null,
-              modelo: asignado.modelo ?? d.modelo ?? null,
-              estado: null,
-              en_reparacion: false,
-            };
-            setMoldeSel(moldeAsignado);
-            setStep("acciones");
-            void evaluar(asignado.numero_molde, d);
-            return;
-          }
+      // Las 3 llamadas son independientes — se lanzan en paralelo
+      const [moldesResult, colorResult, asignadoResult] = await Promise.allSettled([
+        listarMoldesFn({ data: { modelo: d.modelo, medida: d.medida || null } }),
+        d.color ? clasificarColorFn({ data: { color: d.color } }) : Promise.resolve(null),
+        obtenerMoldeOfFn({ data: { numeroOf: d.numero_of } }),
+      ]);
+
+      setMoldesDisp(moldesResult.status === "fulfilled" ? moldesResult.value as MoldeDisponible[] : []);
+      setColorClass(colorResult.status === "fulfilled" ? colorResult.value as ColorClass | null : null);
+
+      const asignado = asignadoResult.status === "fulfilled" ? asignadoResult.value : null;
+
+      if (asignado) {
+        setMoldeAsignadoOf(asignado.numero_molde);
+        if (!flujoProducto) {
+          setMoldeSel({
+            numero_molde: asignado.numero_molde,
+            medida: asignado.medida ?? d.medida ?? null,
+            modelo: asignado.modelo ?? d.modelo ?? null,
+            estado: null,
+            en_reparacion: false,
+          });
+          setStep("acciones");
+          void evaluar(asignado.numero_molde, d as OfData);
+          return;
         }
-      } catch { /* sigue al paso molde */ }
+      }
 
-      if (!flujoProducto && !asignadoNumero && !esPreparacion) {
+      if (!flujoProducto && !asignado && !esPreparacion) {
         setError("Esta OF aún no tiene molde asignado. Preparación de molde debe asignar el molde primero.");
         setStep("of");
         return;
@@ -778,26 +779,28 @@ function BloqueoToggle({ label, bloqueado, puedeOficial, onClick }: { label: str
   );
 }
 
+const ESTADO_BADGE_MAP: Record<string, { c: string; l: string }> = {
+  ok: { c: "bg-emerald-500/15 text-emerald-400 border-emerald-500/40", l: "OK" },
+  seguir_produccion: { c: "bg-emerald-500/15 text-emerald-400 border-emerald-500/40", l: "Seguir producción" },
+  observacion: { c: "bg-amber-500/15 text-amber-400 border-amber-500/40", l: "Observación" },
+  mandar_reparacion: { c: "bg-destructive/15 text-destructive border-destructive/40", l: "Mandar reparación" },
+  en_reparacion: { c: "bg-destructive/15 text-destructive border-destructive/40", l: "En reparación" },
+};
+
 function EstadoBadge({ estado, enRep }: { estado: string; enRep: boolean }) {
   const efectivo = enRep ? "en_reparacion" : estado;
-  const map: Record<string, { c: string; l: string }> = {
-    ok: { c: "bg-emerald-500/15 text-emerald-400 border-emerald-500/40", l: "OK" },
-    seguir_produccion: { c: "bg-emerald-500/15 text-emerald-400 border-emerald-500/40", l: "Seguir producción" },
-    observacion: { c: "bg-amber-500/15 text-amber-400 border-amber-500/40", l: "Observación" },
-    mandar_reparacion: { c: "bg-destructive/15 text-destructive border-destructive/40", l: "Mandar reparación" },
-    en_reparacion: { c: "bg-destructive/15 text-destructive border-destructive/40", l: "En reparación" },
-  };
-  const m = map[efectivo] ?? { c: "bg-secondary", l: efectivo };
+  const m = ESTADO_BADGE_MAP[efectivo] ?? { c: "bg-secondary", l: efectivo };
   return <span className={`inline-block rounded-full border px-2 py-0.5 text-[11px] font-medium ${m.c}`}>{m.l}</span>;
 }
 
+const CANAL_CHIP_MAP: Record<EstadoCanal, { c: string; l: string }> = {
+  ok: { c: "bg-emerald-500/15 text-emerald-400 border-emerald-500/40", l: "OK" },
+  observacion: { c: "bg-amber-500/15 text-amber-400 border-amber-500/40", l: "Observación" },
+  bloqueado: { c: "bg-destructive/15 text-destructive border-destructive/40", l: "Bloqueado" },
+};
+
 function CanalChip({ label, estado, active }: { label: string; estado: EstadoCanal; active: boolean }) {
-  const map: Record<EstadoCanal, { c: string; l: string }> = {
-    ok: { c: "bg-emerald-500/15 text-emerald-400 border-emerald-500/40", l: "OK" },
-    observacion: { c: "bg-amber-500/15 text-amber-400 border-amber-500/40", l: "Observación" },
-    bloqueado: { c: "bg-destructive/15 text-destructive border-destructive/40", l: "Bloqueado" },
-  };
-  const m = map[estado];
+  const m = CANAL_CHIP_MAP[estado];
   return (
     <div className={`flex items-center justify-between rounded-md border px-2 py-1 ${m.c} ${active ? "ring-2 ring-offset-1 ring-offset-background" : "opacity-80"}`}>
       <span className="font-medium">{label}</span>
@@ -924,12 +927,13 @@ function IncidenciaDialog({
   const [recording, setRecording] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const elapsedRef = useRef(0);
+  const timerDisplayRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => () => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -975,15 +979,20 @@ function IncidenciaDialog({
       mr.onstop = async () => {
         stream.getTracks().forEach((track) => track.stop());
         if (timerRef.current) clearInterval(timerRef.current);
+        elapsedRef.current = 0;
+        if (timerDisplayRef.current) timerDisplayRef.current.textContent = "0:00";
         setRecording(false);
         const blob = new Blob(chunksRef.current, { type: mr.mimeType || "audio/webm" });
         await procesarAudio(blob, mr.mimeType || "audio/webm");
       };
       mr.start();
       mediaRecorderRef.current = mr;
+      elapsedRef.current = 0;
       setRecording(true);
-      setElapsed(0);
-      timerRef.current = setInterval(() => setElapsed((s) => s + 1), 1000);
+      timerRef.current = setInterval(() => {
+        elapsedRef.current += 1;
+        if (timerDisplayRef.current) timerDisplayRef.current.textContent = formatAudioTime(elapsedRef.current);
+      }, 1000);
     } catch {
       setError("No se pudo acceder al micrófono.");
     }
@@ -1057,7 +1066,7 @@ function IncidenciaDialog({
               className={`flex h-12 w-full items-center justify-center gap-2 rounded-md text-sm font-semibold disabled:opacity-60 ${recording ? "bg-destructive text-destructive-foreground" : "bg-primary text-primary-foreground"}`}
             >
               {processing ? <Loader2 className="h-5 w-5 animate-spin" /> : recording ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-              {processing ? "Analizando audio…" : recording ? `Parar grabación (${formatAudioTime(elapsed)})` : "Grabar incidencia con IA"}
+              {processing ? "Analizando audio…" : recording ? <>Parar grabación (<span ref={timerDisplayRef}>0:00</span>)</> : "Grabar incidencia con IA"}
             </button>
             {extraida?.transcripcion && (
               <div className="rounded-md border border-border bg-card p-2 text-xs text-muted-foreground">
@@ -1134,14 +1143,21 @@ function ReparacionDialog({ numeroMolde, numeroOf, userId, onClose, onSaved, man
   const fileRef = useRef<HTMLInputElement>(null);
 
   const addFoto = (file: File) => {
-    if (fotos.length >= 2) return;
-    setFotos([...fotos, file]);
-    setPreviews([...previews, URL.createObjectURL(file)]);
+    setFotos((prev) => {
+      if (prev.length >= 2) return prev;
+      return [...prev, file];
+    });
+    setPreviews((prev) => {
+      if (prev.length >= 2) return prev;
+      return [...prev, URL.createObjectURL(file)];
+    });
   };
   const removeFoto = (i: number) => {
-    URL.revokeObjectURL(previews[i]);
-    setFotos(fotos.filter((_, x) => x !== i));
-    setPreviews(previews.filter((_, x) => x !== i));
+    setPreviews((prev) => {
+      URL.revokeObjectURL(prev[i]);
+      return prev.filter((_, x) => x !== i);
+    });
+    setFotos((prev) => prev.filter((_, x) => x !== i));
   };
 
   // TODO: conectar a almacenamiento real cuando esté disponible
@@ -1235,12 +1251,13 @@ function ObservacionDialog({
   const [recording, setRecording] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const elapsedRef = useRef(0);
+  const timerDisplayRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => () => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -1270,14 +1287,20 @@ function ObservacionDialog({
       mr.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
         if (timerRef.current) clearInterval(timerRef.current);
+        elapsedRef.current = 0;
+        if (timerDisplayRef.current) timerDisplayRef.current.textContent = "0:00";
         setRecording(false);
         const blob = new Blob(chunksRef.current, { type: mr.mimeType || "audio/webm" });
         await procesarAudio(blob, mr.mimeType || "audio/webm");
       };
       mr.start();
       mediaRecorderRef.current = mr;
-      setRecording(true); setElapsed(0);
-      timerRef.current = setInterval(() => setElapsed((s) => s + 1), 1000);
+      elapsedRef.current = 0;
+      setRecording(true);
+      timerRef.current = setInterval(() => {
+        elapsedRef.current += 1;
+        if (timerDisplayRef.current) timerDisplayRef.current.textContent = formatAudioTime(elapsedRef.current);
+      }, 1000);
     } catch {
       setError("No se pudo acceder al micrófono.");
     }
@@ -1320,7 +1343,7 @@ function ObservacionDialog({
             <button type="button" onClick={() => (recording ? stopRecording() : startRecording())} disabled={disabled}
               className={`flex h-12 w-full items-center justify-center gap-2 rounded-md text-sm font-semibold disabled:opacity-60 ${recording ? "bg-destructive text-destructive-foreground" : "bg-primary text-primary-foreground"}`}>
               {processing ? <Loader2 className="h-5 w-5 animate-spin" /> : recording ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-              {processing ? "Analizando audio…" : recording ? `Parar grabación (${formatAudioTime(elapsed)})` : "Grabar observación con IA"}
+              {processing ? "Analizando audio…" : recording ? <>Parar grabación (<span ref={timerDisplayRef}>0:00</span>)</> : "Grabar observación con IA"}
             </button>
             {transcripcion && (
               <div className="rounded-md border border-border bg-card p-2 text-xs text-muted-foreground">

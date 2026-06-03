@@ -1,6 +1,10 @@
 import { signInFn, type UsuarioSession } from "./auth.functions";
 
-const SESSION_KEY = "app_session";
+const SESSION_KEY = "app_session:v2";
+// Al cambiar la versión, limpiar claves antiguas del mismo dominio
+if (typeof window !== "undefined") {
+  localStorage.removeItem("app_session");
+}
 
 export type MockUser = { id: string; email: string };
 

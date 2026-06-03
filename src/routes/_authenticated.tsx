@@ -1,11 +1,19 @@
 import { createFileRoute, Link, Outlet, redirect, useLocation, useNavigate, useRouter } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { Loader2, LogOut, Menu, X, RefreshCw, ArrowLeft } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import Loader2 from "lucide-react/dist/esm/icons/loader-2";
+import LogOut from "lucide-react/dist/esm/icons/log-out";
+import Menu from "lucide-react/dist/esm/icons/menu";
+import X from "lucide-react/dist/esm/icons/x";
+import RefreshCw from "lucide-react/dist/esm/icons/refresh-cw";
+import ArrowLeft from "lucide-react/dist/esm/icons/arrow-left";
 import { mockAuth } from "@/lib/mock-auth";
 import { AuthProvider, useAuth } from "@/lib/use-auth";
 import { puestoLabel } from "@/lib/constants";
 import { PermisosProvider, useCanShowButton, useRefreshPermisos } from "@/lib/use-permisos";
 import { HOME_BUTTON_IDS, getNavEntriesForSurface, renderNavEntry } from "@/lib/navigation-permissions";
+
+const ICON_BTN_CLS = "inline-flex h-10 w-10 items-center justify-center rounded-full hover:bg-secondary";
+const MENU_ITEM_CLS = "flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium hover:bg-secondary";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: () => {
@@ -68,18 +76,19 @@ function AuthLayoutContent() {
     navigate({ to: "/login" });
   };
 
-  const iconBtnCls = "inline-flex h-10 w-10 items-center justify-center rounded-full hover:bg-secondary";
-  const menuItemCls = "flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium hover:bg-secondary";
 
   const closeMenu = () => setMenuOpen(false);
 
-  const menuItems = getNavEntriesForSurface("menu").filter((item) => {
-    if (!ready && item.buttonId) return false;
-    if (item.onlyScope === "admin" && scope !== "admin") return false;
-    if (item.buttonId && !can(item.buttonId)) return false;
-    if (item.buttonId && HOME_BUTTON_IDS.includes(item.buttonId)) return false;
-    return true;
-  });
+  const menuItems = useMemo(
+    () => getNavEntriesForSurface("menu").filter((item) => {
+      if (!ready && item.buttonId) return false;
+      if (item.onlyScope === "admin" && scope !== "admin") return false;
+      if (item.buttonId && !can(item.buttonId)) return false;
+      if (item.buttonId && HOME_BUTTON_IDS.includes(item.buttonId)) return false;
+      return true;
+    }),
+    [ready, scope, can],
+  );
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -87,7 +96,7 @@ function AuthLayoutContent() {
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-2 px-4 py-3">
           <div className="flex min-w-0 items-center gap-2">
             {!isHome && (
-              <button onClick={goBack} className={iconBtnCls} aria-label="Volver">
+              <button onClick={goBack} className={ICON_BTN_CLS} aria-label="Volver">
                 <ArrowLeft className="h-5 w-5" />
               </button>
             )}
@@ -99,10 +108,10 @@ function AuthLayoutContent() {
             </Link>
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={logout} className={iconBtnCls} aria-label="Cerrar sesión" title="Cerrar sesión">
+            <button onClick={logout} className={ICON_BTN_CLS} aria-label="Cerrar sesión" title="Cerrar sesión">
               <LogOut className="h-5 w-5" />
             </button>
-            <button onClick={() => setMenuOpen(true)} className={iconBtnCls} aria-label="Menú">
+            <button onClick={() => setMenuOpen(true)} className={ICON_BTN_CLS} aria-label="Menú">
               <Menu className="h-5 w-5" />
             </button>
           </div>
@@ -120,7 +129,7 @@ function AuthLayoutContent() {
                   {rol}{profile?.puesto ? ` · ${puestoLabel(profile.puesto)}` : ""}
                 </div>
               </div>
-              <button onClick={closeMenu} className={iconBtnCls} aria-label="Cerrar menú">
+              <button onClick={closeMenu} className={ICON_BTN_CLS} aria-label="Cerrar menú">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -132,7 +141,7 @@ function AuthLayoutContent() {
                   <div key={it.key}>
                     {renderNavEntry(
                       it,
-                      menuItemCls,
+                      MENU_ITEM_CLS,
                       <><Icon className="h-5 w-5" /> {it.label}</>,
                       closeMenu,
                     )}
@@ -141,11 +150,11 @@ function AuthLayoutContent() {
               })}
               <button
                 onClick={async () => { await refreshPermisos(); closeMenu(); }}
-                className={`${menuItemCls} text-left`}
+                className={`${MENU_ITEM_CLS} text-left`}
               >
                 <RefreshCw className="h-5 w-5" /> Refrescar permisos
               </button>
-              <button onClick={() => { closeMenu(); logout(); }} className={`${menuItemCls} text-left`}>
+              <button onClick={() => { closeMenu(); logout(); }} className={`${MENU_ITEM_CLS} text-left`}>
                 <LogOut className="h-5 w-5" /> Cerrar sesión
               </button>
             </nav>

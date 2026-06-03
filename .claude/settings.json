@@ -6,7 +6,11 @@
       "PowerShell(Stop-Process -Force -ErrorAction SilentlyContinue)",
       "Bash(Get-ChildItem -Directory)",
       "Bash(Select-Object Name)",
-      "Bash(Format-Table -HideTableHeaders)"
+      "Bash(Format-Table -HideTableHeaders)",
+      "Bash(gh repo *)",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/lucide-react/package.json'\\).version\\)\")",
+      "Bash(node -e \"const p=require\\('./node_modules/lucide-react/package.json'\\); console.log\\(JSON.stringify\\({types:p.types,exports:p.exports&&Object.keys\\(p.exports\\).slice\\(0,8\\)},null,2\\)\\)\")",
+      "Bash(node -e \"const p=require\\('./node_modules/lucide-react/package.json'\\); const exp=p.exports||{}; const k=Object.keys\\(exp\\).slice\\(0,10\\); console.log\\(k\\); if\\(exp['.']\\) console.log\\('root:',JSON.stringify\\(exp['.']\\)\\)\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\jatorres\\.claude\\projects\\c--Users-jatorres-Documents-CLAUDE-CODE-LOVABLE-PLATOS\\memory"
