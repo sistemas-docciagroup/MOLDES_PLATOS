@@ -7,7 +7,9 @@
       "Bash(npm run *)",
       "Bash(start http://localhost:8080)",
       "Bash(sleep 5 && cat \"C:\\\\Users\\\\jatorres\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-jatorres-Documents-CLAUDE-CODE-LOVABLE_PLATOS\\\\6051c0e9-9a3d-4970-8111-2d060ab0c5d3\\\\tasks\\\\bhm02fdma.output\" 2>&1 | tail -10)",
-      "Read(//c/Users/jatorres/AppData/Local/Temp/claude/c--Users-jatorres-Documents-CLAUDE-CODE-LOVABLE_PLATOS/6051c0e9-9a3d-4970-8111-2d060ab0c5d3/tasks/**)"
+      "Read(//c/Users/jatorres/AppData/Local/Temp/claude/c--Users-jatorres-Documents-CLAUDE-CODE-LOVABLE_PLATOS/6051c0e9-9a3d-4970-8111-2d060ab0c5d3/tasks/**)",
+      "Skill(run)",
+      "Skill(run:*)"
     ]
   }
 }
